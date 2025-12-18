@@ -1,0 +1,88 @@
+
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>⚽ LIVE Football Predictor</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:Segoe UI;background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);color:white;min-height:100vh;padding:20px;}
+    .container{max-width:1200px;margin:0 auto;}
+    h1{text-align:center;font-size:2.5em;margin-bottom:20px;}
+    .controls{text-align:center;margin:20px 0;}
+    button{background:#ff4757;color:white;border:none;padding:15px 30px;border-radius:25px;font-size:1.1em;cursor:pointer;margin:5px;}
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin:20px 0;}
+    .stat{background:rgba(255,255,255,0.1);padding:15px;border-radius:10px;text-align:center;}
+    .matches{display:grid;gap:20px;}
+    .match{background:rgba(255,255,255,0.1);padding:25px;border-radius:15px;backdrop-filter:blur(10px);}
+    .league{font-weight:bold;color:#00d4ff;font-size:1.2em;}
+    .score{font-size:2.5em;text-align:center;color:#00d4aa;margin:15px 0;}
+    .markets{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-top:15px;}
+    .market{padding:12px;background:rgba(0,212,170,0.3);border-radius:8px;text-align:center;font-weight:bold;}
+    .loading{text-align:center;font-size:1.2em;padding:40px;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚽ SofaScore LIVE Predictor</h1>
+    <div class="controls">
+      <button onclick="loadMatches()">🔄 Refresh LIVE</button>
+      <button onclick="loadDebug()">🧪 Debug API</button>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="matches" id="matches"><div class="loading">Click Refresh 🔄</div></div>
+  </div>
+  <script>
+    async function loadMatches(){
+      document.getElementById('matches').innerHTML='<div class="loading">🔄 Loading...</div>';
+      try{
+        const res=await fetch('/api/matches');
+        const data=await res.json();
+        render(data);
+      }catch(e){
+        document.getElementById('matches').innerHTML='<div class="loading">❌ Server Error<br>Run: <code>node server.js</code></div>';
+      }
+    }
+    async function loadDebug(){
+      const res=await fetch('/api/debug');
+      const data=await res.json();
+      document.getElementById('matches').innerHTML=`
+        <div class="match">
+          <h3>🧪 API Status</h3>
+          <p>HTTP: ${data.status || 'N/A'}</p>
+          <p>LIVE Matches: ${data.count || 0}</p>
+          ${data.firstMatch?'✅ '+data.firstMatch.home+' vs '+data.firstMatch.away:'😴 No matches'}
+        </div>`;
+    }
+    function render(data){
+      document.getElementById('stats').innerHTML=`
+        <div class="stat"><div>${data.stats?.totalMatches||0}</div><div>Total</div></div>
+        <div class="stat"><div>${data.stats?.liveMatches||0}</div><div>LIVE</div></div>
+        <div class="stat"><div>${data.stats?.predictions||0}</div><div>Predictions</div></div>`;
+      
+      const matchesEl=document.getElementById('matches');
+      if(!data.matches?.length){
+        matchesEl.innerHTML='<div class="loading">😴 No LIVE matches found</div>';
+        return;
+      }
+      
+      matchesEl.innerHTML=data.matches.map(m=>{
+        const pred=data.predictions.find(p=>p.match_id==m.match_id);
+        return`<div class="match">
+          <div class="league">${m.league}</div>
+          <div class="score">${m.home_team} ${m.home_score}-${m.away_score} ${m.away_team}</div>
+          <div style="text-align:center;margin:10px 0;">LIVE | ${m.minute}' | ${m.time}</div>
+          ${pred?`<div class="markets">
+            <div class="market">O2.5: ${Math.round(pred.over_25)}%</div>
+            <div class="market">BTTS: ${Math.round(pred.btts)}%</div>
+            <div class="market">Conf: ${Math.round(pred.confidence)}%</div>
+          </div>`:''}
+        </div>`;
+      }).join('');
+    }
+    loadMatches();setInterval(loadMatches,30000);
+  </script>
+</body>
+</html>
