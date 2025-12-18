@@ -1,0 +1,159 @@
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>⚽ AI Football Predictor</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:white;min-height:100vh;padding:20px;}
+    .container{max-width:1400px;margin:0 auto;}
+    
+    h1{text-align:center;font-size:3em;margin-bottom:20px;background:linear-gradient(45deg,#00d4aa,#00b894);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    
+    .tabs{display:flex;justify-content:center;gap:20px;margin:30px 0;flex-wrap:wrap;}
+    .tab{background:rgba(255,255,255,0.1);color:white;border:none;padding:18px 35px;border-radius:50px;font-size:1.2em;cursor:pointer;transition:all 0.3s;}
+    .tab.active{background:linear-gradient(45deg,#00d4aa,#00b894);box-shadow:0 10px 30px rgba(0,212,170,0.4);}
+    .tab:hover{background:rgba(255,255,255,0.2);}
+    
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:30px 0;}
+    .stat{background:rgba(255,255,255,0.1);padding:25px;border-radius:20px;text-align:center;}
+    .stat-number{font-size:2.5em;font-weight:900;color:#00d4aa;}
+    
+    .matches{display:grid;gap:25px;}
+    .match{background:rgba(255,255,255,0.08);padding:30px;border-radius:20px;}
+    .league{font-size:1.4em;font-weight:bold;color:#00d4ff;margin-bottom:15px;}
+    .teams{font-size:2em;text-align:center;color:#00d4aa;font-weight:bold;margin:20px 0;}
+    .status{padding:15px;background:rgba(0,212,170,0.2);border-radius:12px;text-align:center;font-weight:bold;}
+    .live-dot{width:12px;height:12px;background:#ff4757;border-radius:50%;animation:pulse 2s infinite;display:inline-block;margin-right:10px;}
+    
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+    .loading{text-align:center;font-size:1.5em;padding:60px;}
+    .no-data{text-align:center;padding:60px;opacity:0.7;font-size:1.3em;}
+    
+    .refresh{position:fixed;bottom:30px;right:30px;background:linear-gradient(45deg,#00d4aa,#00b894);border:none;color:white;width:60px;height:60px;border-radius:50%;font-size:1.5em;cursor:pointer;box-shadow:0 10px 30px rgba(0,212,170,0.4);}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚽ Football Predictor v2.0</h1>
+    
+    <div class="tabs">
+      <button class="tab active" onclick="showLive()">🔴 LIVE MATCHES</button>
+      <button class="tab" onclick="showScheduled()">📅 SCHEDULED</button>
+      <button class="tab" onclick="showAll()">📊 ALL MATCHES</button>
+    </div>
+    
+    <div class="stats" id="stats"></div>
+    <div class="matches" id="matches">
+      <div class="loading">Click a tab to load matches! ⚽</div>
+    </div>
+  </div>
+  
+  <button class="refresh" onclick="loadData()" title="Refresh">↻</button>
+
+  <script>
+    let allData = {};
+    
+    async function loadData() {
+      try {
+        document.getElementById('matches').innerHTML = '<div class="loading">🔄 Loading matches...</div>';
+        const res = await fetch('/api/all-matches');
+        allData = await res.json();
+        updateStats();
+        showLive(); // Default to live
+      } catch(e) {
+        document.getElementById('matches').innerHTML = '<div class="no-data">Server Error! Check console</div>';
+      }
+    }
+    
+    function updateStats() {
+      document.getElementById('stats').innerHTML = `
+        <div class="stat">
+          <div class="stat-number">${allData.live?.length || 0}</div>
+          <div>LIVE</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">${allData.scheduled?.length || 0}</div>
+          <div>SCHEDULED</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">${(allData.live?.length || 0) + (allData.scheduled?.length || 0)}</div>
+          <div>TOTAL</div>
+        </div>
+      `;
+    }
+    
+    function showLive() {
+      setActiveTab(0);
+      const matches = allData.live || [];
+      renderMatches(matches, '🔴 LIVE MATCHES');
+    }
+    
+    function showScheduled() {
+      setActiveTab(1);
+      const matches = allData.scheduled || [];
+      renderMatches(matches, '📅 SCHEDULED MATCHES');
+    }
+    
+    function showAll() {
+      setActiveTab(2);
+      const matches = [...(allData.live || []), ...(allData.scheduled || [])];
+      renderMatches(matches, '📊 ALL MATCHES');
+    }
+    
+    function renderMatches(matches, title) {
+      if (!matches.length) {
+        document.getElementById('matches').innerHTML = `
+          <div class="no-data">
+            No ${title.toLowerCase()} found 😴<br>
+            <small>Try refresh button</small>
+          </div>`;
+        return;
+      }
+      
+      document.getElementById('matches').innerHTML = matches.map(match => `
+        <div class="match">
+          <div class="league">${match.league}</div>
+          <div class="teams">
+            ${match.home_team} 
+            ${match.status === 'LIVE' ? 
+              `<span style="color:#ffeb3b;font-size:2.5em;">${match.home_score}-${match.away_score}</span>` : 
+              'vs'} 
+            ${match.away_team}
+          </div>
+          <div class="status">
+            ${match.status === 'LIVE' ? 
+              `<span class="live-dot"></span>LIVE ${match.minute}'` : 
+              `⏰ ${match.time}`}
+          </div>
+          ${allData.predictions?.find(p => p.match_id === match.match_id) ? `
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:15px;">
+              <div style="background:rgba(255,71,87,0.3);padding:10px;border-radius:8px;text-align:center;">
+                O2.5 ${allData.predictions.find(p=>p.match_id===match.match_id)?.over_25}
+              </div>
+              <div style="background:rgba(0,212,170,0.3);padding:10px;border-radius:8px;text-align:center;">
+                ${allData.predictions.find(p=>p.match_id===match.match_id)?.confidence}%
+              </div>
+              <div style="background:rgba(255,193,7,0.3);padding:10px;border-radius:8px;text-align:center;">
+                ${allData.predictions.find(p=>p.match_id===match.match_id)?.bet}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+    }
+    
+    function setActiveTab(index) {
+      document.querySelectorAll('.tab').forEach((tab,i) => {
+        tab.classList.toggle('active', i === index);
+      });
+    }
+    
+    // START
+    loadData();
+    setInterval(loadData, 30000);
+  </script>
+</body>
+</html>
