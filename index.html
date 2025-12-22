@@ -1,88 +1,318 @@
-
-
-
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>⚽ LIVE Football Predictor</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#00d4aa">
+  <title>⚽ SYNDICATE v8.5 - LIVE ALERT SYSTEM</title>
   <style>
+    :root {
+      --primary-gradient: linear-gradient(135deg, rgba(0,212,170,0.4), rgba(0,184,148,0.2));
+      --secondary-gradient: linear-gradient(135deg, rgba(255,210,63,0.4), rgba(255,193,7,0.2));
+      --danger-gradient: linear-gradient(135deg, rgba(255,107,122,0.4), rgba(255,152,0,0.2));
+      --border-primary: 2px solid #00d4aa;
+      --border-secondary: 2px solid #ffd23f;
+      --border-danger: 2px solid #ff6b7a;
+      --alert-gradient: linear-gradient(135deg, rgba(255,215,0,0.6), rgba(255,165,0,0.4));
+    }
+
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:Segoe UI;background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);color:white;min-height:100vh;padding:20px;}
-    .container{max-width:1200px;margin:0 auto;}
-    h1{text-align:center;font-size:2.5em;margin-bottom:20px;}
-    .controls{text-align:center;margin:20px 0;}
-    button{background:#ff4757;color:white;border:none;padding:15px 30px;border-radius:25px;font-size:1.1em;cursor:pointer;margin:5px;}
-    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin:20px 0;}
-    .stat{background:rgba(255,255,255,0.1);padding:15px;border-radius:10px;text-align:center;}
-    .matches{display:grid;gap:20px;}
-    .match{background:rgba(255,255,255,0.1);padding:25px;border-radius:15px;backdrop-filter:blur(10px);}
-    .league{font-weight:bold;color:#00d4ff;font-size:1.2em;}
-    .score{font-size:2.5em;text-align:center;color:#00d4aa;margin:15px 0;}
-    .markets{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-top:15px;}
-    .market{padding:12px;background:rgba(0,212,170,0.3);border-radius:8px;text-align:center;font-weight:bold;}
-    .loading{text-align:center;font-size:1.2em;padding:40px;}
+    body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#0f0f23 0%,#1a1a2e 50%,#16213e 100%);color:#fff;min-height:100vh;overflow-x:hidden;}
+    
+    .container{max-width:100%;margin:0 auto;padding:10px;}
+    @media (min-width:768px){.container{max-width:1400px;padding:20px;}}
+
+    .alert-toggle{position:fixed;top:20px;left:20px;background:rgba(0,0,0,0.9);backdrop-filter:blur(20px);padding:12px 16px;border-radius:15px;border:2px solid #ffd700;z-index:1001;font-size:14px;cursor:pointer;}
+    .alert-toggle input[type="checkbox"]{margin-right:8px;transform:scale(1.2);accent-color:#ffd700;}
+
+    .header{position:relative;text-align:center;padding:30px;background:var(--primary-gradient);border-radius:25px;margin-bottom:25px;border:var(--border-primary);}
+    .header h1{font-size:clamp(1.8em,5vw,3em);background:linear-gradient(45deg,#00d4aa,#00b894);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px;}
+    .header p{font-size:1.1em;opacity:0.9;}
+
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:15px;margin:20px 0;}
+    .stat-card{background:rgba(255,255,255,0.08);backdrop-filter:blur(15px);padding:20px;border-radius:20px;text-align:center;border:1px solid rgba(255,255,255,0.15);transition:all 0.3s ease;}
+    .stat-card:hover{transform:translateY(-8px) scale(1.02);}
+    .stat-value{font-size:clamp(2em,5vw,3em);font-weight:900;background:linear-gradient(45deg,#00d4aa,#00b894);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;}
+    .stat-label{font-size:13px;opacity:0.9;text-transform:uppercase;letter-spacing:1px;}
+    .alert-stat{animation:pulse-gold 2s infinite;background:var(--alert-gradient) !important;border:2px solid #ffd700 !important;}
+
+    .matches{display:grid;gap:20px;max-height:70vh;overflow-y:auto;padding:15px;scrollbar-width:thin;}
+    .matches::-webkit-scrollbar{width:8px;}
+    .matches::-webkit-scrollbar-thumb{background:linear-gradient(135deg,#00d4aa,#00b894);border-radius:10px;}
+
+    .match{background:rgba(255,255,255,0.06);backdrop-filter:blur(20px);padding:25px;border-radius:25px;border:1px solid rgba(255,255,255,0.1);transition:all 0.4s cubic-bezier(0.25,0.46,0.45,0.94);position:relative;overflow:hidden;}
+    .match::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#00d4aa,#00b894);}
+    .match:hover{transform:translateY(-10px);box-shadow:0 25px 50px rgba(0,212,170,0.3);}
+    .match.alert-active{background:var(--alert-gradient) !important;border:3px solid #ffd700 !important;animation:pulse 1s infinite;box-shadow:0 0 50px rgba(255,215,0,0.7) !important;}
+    
+    .match-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+    .league{font-size:clamp(1.2em,3vw,1.5em);font-weight:900;color:#00d4ff;text-shadow:0 0 10px rgba(0,212,255,0.5);}
+    .badge{padding:8px 15px;border-radius:20px;font-size:12px;font-weight:900;box-shadow:0 4px 15px rgba(0,0,0,0.3);}
+    .enhanced-badge{background:linear-gradient(45deg,#00d4aa,#00b894);color:#fff;}
+    .alert-badge{background:#ffd700 !important;color:#000 !important;animation:pulse 1.5s infinite;}
+
+    .score-board{display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center;margin:20px 0;}
+    @media (max-width:500px){.score-board{grid-template-columns:1fr;text-align:center;gap:10px;}}
+    .team-name{font-size:clamp(1.2em,4vw,1.6em);font-weight:900;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.5);}
+    .live-score{font-size:clamp(2.5em,8vw,4em);font-weight:900;color:#ffeb3b;text-shadow:0 0 30px #ffeb3b;letter-spacing:2px;}
+
+    .status-bar{padding:15px;background:linear-gradient(90deg,rgba(255,71,87,0.25),rgba(0,212,170,0.25));border-radius:20px;display:flex;justify-content:center;align-items:center;font-size:clamp(1em,2.5vw,1.2em);font-weight:700;margin:20px 0;box-shadow:inset 0 2px 10px rgba(0,0,0,0.2);}
+    .live-indicator{width:20px;height:20px;background:#ff4757;border-radius:50%;animation:pulse 1s infinite;margin-right:12px;box-shadow:0 0 20px #ff4757;}
+
+    .oneXtwo-grid{display:grid;grid-template-columns:1fr;gap:12px;margin:20px 0;}
+    @media (min-width:500px){.oneXtwo-grid{grid-template-columns:repeat(3,1fr);}}
+    .oneXtwo-card{padding:20px;background:rgba(255,255,255,0.1);border-radius:20px;text-align:center;font-weight:900;font-size:clamp(1em,2.5vw,1.2em);cursor:pointer;transition:all 0.3s ease;position:relative;overflow:hidden;}
+    .oneXtwo-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--border-primary),var(--border-secondary));}
+    .oneXtwo-card:hover{transform:scale(1.08) translateY(-3px);box-shadow:0 15px 30px rgba(0,0,0,0.3);}
+    .home-win{background:var(--primary-gradient);border:var(--border-primary);}
+    .draw{background:var(--secondary-gradient);border:var(--border-secondary);}
+    .away-win{background:var(--danger-gradient);border:var(--border-danger);}
+
+    .over-under-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;margin:20px 0;padding:20px;background:rgba(255,255,255,0.06);border-radius:20px;border:2px solid rgba(0,212,170,0.3);box-shadow:inset 0 2px 10px rgba(0,0,0,0.2);}
+    .ou-card{padding:16px;background:rgba(0,0,0,0.5);border-radius:15px;text-align:center;font-weight:900;font-size:clamp(0.9em,2vw,1em);cursor:pointer;transition:all 0.3s ease;position:relative;}
+    .ou-card:hover{transform:scale(1.05);box-shadow:0 10px 25px rgba(0,0,0,0.4);}
+    .ou-over{background:linear-gradient(135deg,#00d4aa,#00b894);color:#fff;border:2px solid #00d4aa;}
+    .ou-under{background:linear-gradient(135deg,#ff6b7a,#ff8e8e);color:#fff;border:2px solid #ff6b7a;}
+    .ou-high::after{content:'🚀';position:absolute;top:5px;right:5px;font-size:14px;animation:pulse 1s infinite;}
+
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;margin:20px 0;font-size:12px;}
+    .stat-box{padding:15px;background:rgba(255,255,255,0.08);border-radius:15px;text-align:center;border:1px solid rgba(255,255,255,0.2);font-weight:800;transition:all 0.3s;}
+    .stat-box:hover{transform:scale(1.05);}
+    
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.7;transform:scale(1.08);}}
+    @keyframes pulse-gold{0%,100%{box-shadow:0 0 20px rgba(255,215,0,0.5);}50%{box-shadow:0 0 40px rgba(255,215,0,0.8);}}
+    
+    .loading,.no-matches{text-align:center;font-size:2em;padding:120px;color:#00d4aa;animation:pulse 1.5s infinite;}
+    .no-matches{color:#ff6b7a;}
+    .refresh-btn{position:fixed;bottom:25px;right:25px;background:linear-gradient(45deg,#00d4aa,#00b894);border:none;color:white;width:70px;height:70px;border-radius:50%;font-size:1.8em;cursor:pointer;z-index:1000;transition:all 0.3s ease;box-shadow:0 10px 30px rgba(0,212,170,0.4);}
+    .refresh-btn:hover{transform:scale(1.15) rotate(180deg);}
+    
+    .api-status{position:fixed;top:20px;right:20px;background:rgba(0,0,0,0.95);backdrop-filter:blur(25px);padding:15px 20px;border-radius:20px;font-size:14px;border:2px solid #00d4aa;z-index:1000;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,0.5);}
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>⚽ SofaScore LIVE Predictor</h1>
-    <div class="controls">
-      <button onclick="loadMatches()">🔄 Refresh LIVE</button>
-      <button onclick="loadDebug()">🧪 Debug API</button>
-    </div>
-    <div class="stats" id="stats"></div>
-    <div class="matches" id="matches"><div class="loading">Click Refresh 🔄</div></div>
+  <div class="alert-toggle" onclick="toggleAlerts()">
+    <label><input type="checkbox" id="notificationToggle" checked> 🚨 Goal Alerts</label>
   </div>
+
+  <div class="api-status" id="apiStatus">🔄 Syndicate v8.5 - Loading LIVE matches...</div>
+  
+  <main class="container">
+    <header class="header">
+      <h1>⚽ SYNDICATE v8.5</h1>
+      <p>🇵🇰 PKT | SofaScore LIVE | O0.5>80% + High Pressure = 🚨 INSTANT ALERT</p>
+    </header>
+
+    <section class="stats-grid" id="statsGrid"></section>
+    <section class="matches" id="matchesContainer">
+      <div class="loading">🚀 Syndicate v8.5 - Fetching LIVE matches + xG Analysis...</div>
+    </section>
+  </main>
+  
+  <button class="refresh-btn" title="Refresh" onclick="loadMatches()">↻</button>
+
   <script>
-    async function loadMatches(){
-      document.getElementById('matches').innerHTML='<div class="loading">🔄 Loading...</div>';
-      try{
-        const res=await fetch('/api/matches');
-        const data=await res.json();
-        render(data);
-      }catch(e){
-        document.getElementById('matches').innerHTML='<div class="loading">❌ Server Error<br>Run: <code>node server.js</code></div>';
+    // =============================================================================
+    // SYNDICATE v8.5 FRONTEND - COMPLETE ALERT SYSTEM
+    // =============================================================================
+    let matchesData = [], notifiedMatches = new Set(), alertsEnabled = true;
+    let audioContext = null;
+
+    // 🔔 NOTIFICATION SYSTEM
+    async function initNotifications() {
+      if ('Notification' in window && Notification.permission === 'default') {
+        await Notification.requestPermission();
+      }
+      alertsEnabled = localStorage.getItem('alertsEnabled') !== 'false';
+      document.getElementById('notificationToggle').checked = alertsEnabled;
+    }
+
+    // 🔊 ALERT SOUND (Descending beep)
+    function playAlertSound() {
+      if (!audioContext || !alertsEnabled) return;
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(900, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.3);
+        gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+        
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.4);
+      } catch(e) {}
+    }
+
+    // 🚨 CHECK & TRIGGER ALERTS
+    function checkAlerts(matches) {
+      matches.forEach(match => {
+        if (match.alert?.shouldNotify && !notifiedMatches.has(match.id) && alertsEnabled) {
+          notifiedMatches.add(match.id);
+          
+          // Browser Notification
+          if (Notification.permission === 'granted') {
+            new Notification('🚀 GOAL ALERT!', {
+              body: `${match.home_team.slice(0,12)} vs ${match.away_team.slice(0,12)} | O0.5: ${(match.over_under['O0.5']*100).toFixed(0)}%`,
+              icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjUiIGN5PSIyNSIgcj0iMjUiIGZpbGw9IiNGRkQzMDAiLz4KPHBhdGggZD0iTTIwIDE4QzIwIDE2Ljg0MyAyMS44NDMgMTUgMjMgMTVDMjQuMTU3IDE1IDI2IDE1Ljg0MyAyNiAxOEMyNiAyMC4xNTcgMjQuMTU3IDIxIDIzIDIxQzIxLjg0MyAyMSAyMCAyMC4xNTcgMjAgMThaIE0yMCAzMEMyMCAyOC44NDMgMjEuODQzIDMwIDIzIDMwQzI0LjE1NyAzMCAyNiAyOC4xNTcgMjYgMzBDMjYgMzEuMTU3IDI0LjE1NyAzMiAyMyAzMkMyMS44NDMgMzIgMjAgMzEuMTU3IDIwIDMwWiIgZmlsbD0iIzFGQjMwMCIvPgo8L3N2Zz4K',
+              badge: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTAiIGN5PSIxMCIgcj0iMTAiIGZpbGw9IiNGRkQzMDAiLz4KPC9zdmc+Cg==',
+              vibrate: [200,100,200],
+              tag: `alert-${match.id}`
+            });
+          }
+          
+          playAlertSound();
+          highlightAlertMatch(match.id);
+        }
+      });
+    }
+
+    // ✨ VISUAL ALERT HIGHLIGHT
+    function highlightAlertMatch(matchId) {
+      const matchEl = document.querySelector(`[data-match="${matchId}"]`);
+      if (matchEl) {
+        matchEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        matchEl.classList.add('alert-active');
+        setTimeout(() => matchEl.classList.remove('alert-active'), 12000);
       }
     }
-    async function loadDebug(){
-      const res=await fetch('/api/debug');
-      const data=await res.json();
-      document.getElementById('matches').innerHTML=`
-        <div class="match">
-          <h3>🧪 API Status</h3>
-          <p>HTTP: ${data.status || 'N/A'}</p>
-          <p>LIVE Matches: ${data.count || 0}</p>
-          ${data.firstMatch?'✅ '+data.firstMatch.home+' vs '+data.firstMatch.away:'😴 No matches'}
-        </div>`;
-    }
-    function render(data){
-      document.getElementById('stats').innerHTML=`
-        <div class="stat"><div>${data.stats?.totalMatches||0}</div><div>Total</div></div>
-        <div class="stat"><div>${data.stats?.liveMatches||0}</div><div>LIVE</div></div>
-        <div class="stat"><div>${data.stats?.predictions||0}</div><div>Predictions</div></div>`;
-      
-      const matchesEl=document.getElementById('matches');
-      if(!data.matches?.length){
-        matchesEl.innerHTML='<div class="loading">😴 No LIVE matches found</div>';
+
+    // 📊 RENDER MATCHES
+    function renderMatches(matches) {
+      const container = document.getElementById('matchesContainer');
+      if (!matches?.length) {
+        container.innerHTML = '<div class="no-matches">⚽ No live matches<br>Waiting for SofaScore LIVE...</div>';
         return;
       }
-      
-      matchesEl.innerHTML=data.matches.map(m=>{
-        const pred=data.predictions.find(p=>p.match_id==m.match_id);
-        return`<div class="match">
-          <div class="league">${m.league}</div>
-          <div class="score">${m.home_team} ${m.home_score}-${m.away_score} ${m.away_team}</div>
-          <div style="text-align:center;margin:10px 0;">LIVE | ${m.minute}' | ${m.time}</div>
-          ${pred?`<div class="markets">
-            <div class="market">O2.5: ${Math.round(pred.over_25)}%</div>
-            <div class="market">BTTS: ${Math.round(pred.btts)}%</div>
-            <div class="market">Conf: ${Math.round(pred.confidence)}%</div>
-          </div>`:''}
+
+      // Filter high-confidence markets (70%+ & future lines)
+      container.innerHTML = matches.map(match => {
+        const pred = match.prediction || {};
+        const ou = match.over_under || {};
+        const totalGoals = match.total_goals || 0;
+        
+        const highConfMarkets = Object.keys(ou)
+          .filter(key => ou[key] >= 0.70 && parseFloat(key.replace('O','')) > totalGoals)
+          .map(key => ({ market: key, conf: ou[key] }))
+          .sort((a,b) => b.conf - a.conf)
+          .slice(0, 4);
+
+        const alertBadge = match.alert?.shouldNotify ? '<span class="badge alert-badge">🚨 ALERT LIVE</span>' : 
+                           match.pressure?.highPressure ? '<span class="badge" style="background:#ffd700;color:#000;">⚡ PRESSURE</span>' : 
+                           '<span class="badge enhanced-badge">🧬 xG</span>';
+
+        return `
+        <div class="match" data-match="${match.id}">
+          <div class="match-header">
+            <div class="league">${match.league}</div>
+            ${alertBadge}
+          </div>
+          
+          <div class="score-board">
+            <div class="team-name">${match.home_team}</div>
+            <div class="live-score">${match.home_score || 0}-${match.away_score || 0}</div>
+            <div class="team-name">${match.away_team}</div>
+          </div>
+          
+          <div class="status-bar">
+            <span class="live-indicator"></span>
+            LIVE ${match.minute}' | 🇵🇰 ${match.pk_time} | ${totalGoals}G
+          </div>
+          
+          <div class="oneXtwo-grid">
+            <div class="oneXtwo-card home-win">🏠 ${pred.match_result?.home_win || 45}%</div>
+            <div class="oneXtwo-card draw">🤝 ${pred.match_result?.draw || 30}%</div>
+            <div class="oneXtwo-card away-win">✈️ ${pred.match_result?.away_win || 25}%</div>
+          </div>
+          
+          ${highConfMarkets.length ? `
+          <div class="over-under-grid">
+            ${highConfMarkets.map(m => `
+              <div class="ou-card ou-over ${m.conf >= 0.80 ? 'ou-high' : ''}">
+                <div>${m.market}</div>
+                <div>${Math.round(m.conf*100)}%</div>
+              </div>
+            `).join('')}
+          </div>
+          ` : ''}
+          
+          <div class="stats-row">
+            <div class="stat-box">λ${pred.lambda_home || '1.5'}-${pred.lambda_away || '1.2'}</div>
+            <div class="stat-box">${pred.game_type || '⚡ NORMAL'}</div>
+            <div class="stat-box">${totalGoals}G → ${highConfMarkets.length}/4</div>
+          </div>
         </div>`;
       }).join('');
     }
-    loadMatches();setInterval(loadMatches,30000);
+
+    // 📈 UPDATE STATS DASHBOARD
+    function updateStats(data) {
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-value">${data.live_count || 0}</div>
+          <div class="stat-label">LIVE</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${data.live_count || 0}</div>
+          <div class="stat-label">xG ANALYZED</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${data.high_prob_bets || 0}</div>
+          <div class="stat-label">>70% BETS</div>
+        </div>
+        <div class="stat-card alert-stat">
+          <div class="stat-value">${data.alert_count || 0}</div>
+          <div class="stat-label">🚨 ALERTS</div>
+        </div>
+      `;
+    }
+
+    // 🌐 LOAD MATCHES
+    async function loadMatches() {
+      try {
+        document.getElementById('apiStatus').textContent = '🔄 Loading LIVE data...';
+        
+        const response = await fetch('/api/matches');
+        const data = await response.json();
+        
+        matchesData = data.live || [];
+        document.getElementById('apiStatus').innerHTML = 
+          `✅ ${data.live_count || 0} LIVE | ${data.alert_count || 0} 🚨 ALERTS<br>
+           <small>v8.5 PURE ESM | 🇵🇰 ${data.pkt_time} | ${data.syndicate_version}</small>`;
+        
+        updateStats(data);
+        renderMatches(matchesData);
+        checkAlerts(matchesData);
+        
+      } catch(e) {
+        document.getElementById('apiStatus').textContent = '❌ Server offline - node server.js';
+        document.getElementById('matchesContainer').innerHTML = '<div class="no-matches">Server Error<br>Run: node server.js</div>';
+      }
+    }
+
+    // ⚙️ TOGGLE ALERTS
+    function toggleAlerts() {
+      alertsEnabled = !alertsEnabled;
+      localStorage.setItem('alertsEnabled', alertsEnabled);
+      console.log(`🔔 Alerts: ${alertsEnabled ? 'ON' : 'OFF'}`);
+    }
+
+    // 🔄 AUTO-REFRESH
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) loadMatches();
+    });
+    window.addEventListener('focus', loadMatches);
+
+    // 🚀 INIT
+    window.addEventListener('load', async () => {
+      console.log('🚀 Syndicate v8.5 Frontend - LIVE!');
+      await initNotifications();
+      loadMatches();
+      setInterval(loadMatches, 80000); // 80s refresh
+    });
   </script>
 </body>
 </html>
